@@ -1,29 +1,25 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # Für Sessions
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///copnet.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+app.secret_key = 'dein_geheimes_secret_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
-login_manager = LoginManager()
-login_manager.init_app(app)
 
-# ---------- MODELS ----------
-class User(UserMixin, db.Model):
+# ------------------------
+# Datenbank-Model
+# ------------------------
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    dienstnummer = db.Column(db.String(20), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # admin, chief, officer
-    server = db.Column(db.String(10), nullable=False)  # z.B. S1
+    dienstnummer = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(50), nullable=False)
+    server = db.Column(db.String(50), nullable=True)
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-# ---------- ROUTES ----------
+# ------------------------
+# Routen
+# ------------------------
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -32,46 +28,31 @@ def login():
         password = request.form['password']
 
         user = User.query.filter_by(dienstnummer=dienstnummer).first()
-        if user and user.password == password:
-            login_user(user)
-            return redirect(url_for('dashboard'))
+        if user and check_password_hash(user.password, password):
+            session['dienstnummer'] = user.dienstnummer
+            session['role'] = user.role
+            return f"Willkommen {user.dienstnummer} (Role: {user.role})"
         else:
-            flash('Falsche Dienstnummer oder Passwort.')
-    return render_template('login.html')
+            return "Login fehlgeschlagen!"
 
-@app.route('/dashboard')
-@login_required
-def dashboard():
-    return render_template('dashboard.html', user=current_user)
+    return '''
+        <form method="post">
+            Dienstnummer: <input type="text" name="dienstnummer"><br>
+            Passwort: <input type="password" name="password"><br>
+            <input type="submit" value="Login">
+        </form>
+    '''
 
 @app.route('/logout')
-@login_required
 def logout():
-    logout_user()
+    session.clear()
     return redirect(url_for('login'))
 
-@app.route('/admin')
-@login_required
-def admin():
-    if current_user.role != 'admin':
-        flash('Keine Berechtigung.')
-        return redirect(url_for('dashboard'))
-    users = User.query.all()
-    return render_template('admin.html', users=users)
+# ------------------------
+# Main
+# ------------------------
 
-# ---------- INIT ----------
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
-        # Admin anlegen, falls nicht vorhanden
-        admin = User.query.filter_by(dienstnummer='S0-ADM01').first()
-        if not admin:
-            new_admin = User(
-                dienstnummer='S0-ADM01',
-                password='1a2b3d4C.00',
-                role='admin',
-                server='S0'
-            )
-            db.session.add(new_admin)
-            db.session.commit()
+        db.create_all()  # Erstellt DB & Tabellen falls nicht vorhanden
     app.run(debug=True)

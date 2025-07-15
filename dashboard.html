@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+    <title>CopNet Desktop</title>
+</head>
+<body>
+    <h1>Willkommen, {{ user.dienstnummer }} ({{ user.role }})</h1>
+
+    <h2>Deine Apps:</h2>
+    <ul>
+        <li>Stempeluhr</li>
+        <li>Akten</li>
+        <li>Officer</li>
+        <li>Fahrzeug-Register</li>
+        <li>Ermittlungsakten</li>
+        <li>Gesetze</li>
+        {% if user.role == 'admin' %}
+          <li><a href="{{ url_for('admin') }}">Admin-Bereich</a></li>
+        {% endif %}
+    </ul>
+
+    <a href="{{ url_for('logout') }}">Logout</a>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+    <title>Admin</title>
+</head>
+<body>
+    <h1>Admin-Bereich</h1>
+    <h2>Alle Nutzer:</h2>
+    <table border="1">
+      <tr>
+        <th>ID</th><th>Dienstnummer</th><th>Rolle</th><th>Server</th>
+      </tr>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.dienstnummer }}</td>
+        <td>{{ u.role }}</td>
+        <td>{{ u.server }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <a href="{{ url_for('dashboard') }}">Zurück</a>
+</body>
+</html>
